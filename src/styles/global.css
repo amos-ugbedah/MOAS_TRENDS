@@ -1,0 +1,11 @@
+/* global.css */
+/* Force pointer cursor on ALL interactive elements */
+a, button, [role="button"], input, textarea, select, 
+[type="submit"], [type="button"], [tabindex]:not([tabindex="-1"]) {
+  cursor: pointer !important;
+}
+
+/* Reset for non-interactive elements */
+html, body {
+  cursor: auto !important;
+}
