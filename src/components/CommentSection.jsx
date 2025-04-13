@@ -16,15 +16,15 @@ const CommentSection = ({ newsId, session }) => {
     const fetchComments = async () => {
       const { data, error } = await supabase
         .from("comments")
-        .select("id, user_id, comment, commented_at")
+        .select("id, user_id, content, created_at")  // Changed from 'comment' to 'content'
         .eq("news_id", newsId)
-        .order("commented_at", { ascending: false });
+        .order("created_at", { ascending: false });  // Changed from 'commented_at' to 'created_at'
 
       if (error) {
         console.error("Error fetching comments:", error.message);
       } else {
         console.log("Fetched comments:", data);
-        setComments(data); // Set the fetched comments directly
+        setComments(data);
       }
     };
 
@@ -50,20 +50,19 @@ const CommentSection = ({ newsId, session }) => {
         .insert({
           news_id: newsId,
           user_id: session.user.email,
-          comment: newComment.trim(),
-          commented_at: new Date().toISOString(),
+          content: newComment.trim(),  // Changed from 'comment' to 'content'
+          created_at: new Date().toISOString(),  // Changed from 'commented_at' to 'created_at'
         })
-        .select(); // Return the inserted data
+        .select();
 
       if (error) {
         console.error("Error posting comment:", error.message);
         alert("Failed to post comment.");
       } else if (Array.isArray(data) && data.length > 0) {
-        setComments((prev) => [data[0], ...prev]); // Prepend the new comment to the list
+        setComments((prev) => [data[0], ...prev]);
         setSuccessMessage("Commented successfully!");
-        setNewComment(""); // Clear the input box
+        setNewComment("");
 
-        // Optional: hide success message after 3 seconds
         setTimeout(() => setSuccessMessage(""), 3000);
       }
     } catch (err) {
@@ -82,9 +81,12 @@ const CommentSection = ({ newsId, session }) => {
     try {
       const { error } = await supabase
         .from("comments")
-        .update({ comment: editedComment })
+        .update({ 
+          content: editedComment,  // Changed from 'comment' to 'content'
+          updated_at: new Date().toISOString()  // Added updated_at field
+        })
         .eq("id", commentId)
-        .eq("user_id", session?.user?.email); // Ensure user owns the comment
+        .eq("user_id", session?.user?.email);
 
       if (error) {
         console.error("Error editing comment:", error.message);
@@ -92,10 +94,14 @@ const CommentSection = ({ newsId, session }) => {
       } else {
         setComments((prev) =>
           prev.map((comment) =>
-            comment.id === commentId ? { ...comment, comment: editedComment } : comment
+            comment.id === commentId ? { 
+              ...comment, 
+              content: editedComment,
+              updated_at: new Date().toISOString()
+            } : comment
           )
         );
-        setEditingCommentId(null); // Exit edit mode
+        setEditingCommentId(null);
       }
     } catch (err) {
       console.error("Unexpected error editing comment:", err.message);
@@ -103,20 +109,20 @@ const CommentSection = ({ newsId, session }) => {
   };
 
   const handleDeleteComment = async () => {
-    const isAdmin = session?.user?.email === "admin@example.com"; // Adjust admin logic as needed
+    const isAdmin = session?.user?.email === "admin@example.com";
     try {
       const { error } = await supabase
         .from("comments")
         .delete()
         .eq("id", commentToDelete)
-        .or(isAdmin ? "" : `user_id.eq.${session?.user?.email}`); // Admin check logic
+        .or(isAdmin ? "" : `user_id.eq.${session?.user?.email}`);
 
       if (error) {
         console.error("Error deleting comment:", error.message);
         alert("Failed to delete comment.");
       } else {
         setComments((prev) => prev.filter((comment) => comment.id !== commentToDelete));
-        setShowConfirmModal(false); // Close the confirmation modal
+        setShowConfirmModal(false);
       }
     } catch (err) {
       console.error("Unexpected error deleting comment:", err.message);
@@ -124,13 +130,13 @@ const CommentSection = ({ newsId, session }) => {
   };
 
   const showDeleteConfirmation = (commentId) => {
-    setCommentToDelete(commentId); // Store the comment to delete
-    setShowConfirmModal(true); // Open the confirmation modal
+    setCommentToDelete(commentId);
+    setShowConfirmModal(true);
   };
 
   const cancelDelete = () => {
-    setCommentToDelete(null); // Clear the comment being deleted
-    setShowConfirmModal(false); // Close the confirmation modal
+    setCommentToDelete(null);
+    setShowConfirmModal(false);
   };
 
   return (
@@ -145,18 +151,18 @@ const CommentSection = ({ newsId, session }) => {
       <button
         onClick={handleCommentSubmit}
         disabled={isSubmitting}
-        className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+        className="px-4 py-2 mt-2 text-white bg-blue-600 rounded hover:bg-blue-700"
       >
         {isSubmitting ? "Submitting..." : "Post Comment"}
       </button>
 
       {successMessage && (
-        <p className="mt-2 text-green-600 font-medium">{successMessage}</p>
+        <p className="mt-2 font-medium text-green-600">{successMessage}</p>
       )}
 
       <div className="mt-4">
         {comments.map((comment) => (
-          <div key={comment.id} className="mb-2 p-2 border rounded">
+          <div key={comment.id} className="p-2 mb-2 border rounded">
             {editingCommentId === comment.id ? (
               <div>
                 <textarea
@@ -167,30 +173,30 @@ const CommentSection = ({ newsId, session }) => {
                 />
                 <button
                   onClick={() => handleEditComment(comment.id)}
-                  className="mt-1 px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600"
+                  className="px-2 py-1 mt-1 text-white bg-green-500 rounded hover:bg-green-600"
                 >
                   Save
                 </button>
                 <button
                   onClick={() => setEditingCommentId(null)}
-                  className="mt-1 ml-2 px-2 py-1 bg-gray-300 text-black rounded hover:bg-gray-400"
+                  className="px-2 py-1 mt-1 ml-2 text-black bg-gray-300 rounded hover:bg-gray-400"
                 >
                   Cancel
                 </button>
               </div>
             ) : (
               <>
-                <p className="text-sm text-gray-800">{comment.comment}</p>
+                <p className="text-sm text-gray-800">{comment.content}</p>  {/* Changed from 'comment' to 'content' */}
                 <p className="text-xs text-gray-500">
-                  {new Date(comment.commented_at).toLocaleString()}
+                  {new Date(comment.created_at).toLocaleString()}  {/* Changed from 'commented_at' to 'created_at' */}
                 </p>
                 {(session?.user?.email === comment.user_id ||
                   session?.user?.email === "admin@example.com") && (
-                  <div className="flex space-x-2 mt-2">
+                  <div className="flex mt-2 space-x-2">
                     <button
                       onClick={() => {
                         setEditingCommentId(comment.id);
-                        setEditedComment(comment.comment);
+                        setEditedComment(comment.content);  // Changed from 'comment' to 'content'
                       }}
                       className="text-blue-500 underline"
                     >
@@ -213,18 +219,18 @@ const CommentSection = ({ newsId, session }) => {
       {/* Confirmation Modal */}
       {showConfirmModal && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white p-6 rounded shadow-lg">
-            <p className="text-lg font-medium mb-4">Are you sure you want to delete this comment?</p>
+          <div className="p-6 bg-white rounded shadow-lg">
+            <p className="mb-4 text-lg font-medium">Are you sure you want to delete this comment?</p>
             <div className="flex justify-center space-x-4">
               <button
                 onClick={handleDeleteComment}
-                className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+                className="px-4 py-2 text-white bg-red-500 rounded hover:bg-red-600"
               >
                 Yes
               </button>
               <button
                 onClick={cancelDelete}
-                className="px-4 py-2 bg-gray-300 text-black rounded hover:bg-gray-400"
+                className="px-4 py-2 text-black bg-gray-300 rounded hover:bg-gray-400"
               >
                 No
               </button>

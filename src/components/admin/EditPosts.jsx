@@ -1,110 +1,121 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import Title from "../Title";
-import axiosInstance from "../../services/axiosInstance"; // Import the updated Axios instance
+import { supabase } from "../../libs/supabaseClient";
 
 const EditPosts = () => {
   const navigate = useNavigate();
+  const [newsItems, setNewsItems] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isPending, setIsPending] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [confirmationVisible, setConfirmationVisible] = useState(false);
+  const [newsToDelete, setNewsToDelete] = useState(null);
+  const [error, setError] = useState(null);
 
-  const [posts, setPosts] = useState([]); // State for all posts
-  const [searchTerm, setSearchTerm] = useState(""); // Search term for filtering posts
-  const [isPending, setIsPending] = useState(false); // Loading state for fetching posts
-  const [isDeleting, setIsDeleting] = useState(false); // Loading state for deleting a post
-  const [confirmationVisible, setConfirmationVisible] = useState(false); // State for showing confirmation
-  const [postToDelete, setPostToDelete] = useState(null); // Post ID to delete
-  const [error, setError] = useState(null); // Error state for handling failures
-
-  // Fetch all posts
+  // Fetch all news items
   useEffect(() => {
-    const fetchPosts = async () => {
+    const fetchNews = async () => {
       setIsPending(true);
       try {
-        const { data } = await axiosInstance.get("/news"); // Fetch all posts from Supabase
-        setPosts(data); // Populate posts state
+        const { data, error } = await supabase
+          .from("news")
+          .select("*")
+          .order("created_at", { ascending: false });
+
+        if (error) throw error;
+
+        setNewsItems(data || []);
       } catch (error) {
-        console.error("Error fetching posts:", error.response?.data || error.message);
-        setError("Failed to fetch posts.");
+        console.error("Error fetching news:", error.message);
+        setError(error.message || "Failed to fetch news items");
       } finally {
         setIsPending(false);
       }
     };
 
-    fetchPosts();
+    fetchNews();
   }, []);
 
   const handleDelete = async () => {
-    if (!postToDelete) return;
+    if (!newsToDelete) return;
 
     setIsDeleting(true);
     try {
-      await axiosInstance.delete(`/news?id=eq.${postToDelete}`); // Delete post in Supabase
-      setPosts((prevPosts) => prevPosts.filter((post) => post.id !== postToDelete)); // Update UI state
-      setPostToDelete(null); // Clear selected post
-      setConfirmationVisible(false); // Close confirmation modal
+      const { error } = await supabase
+        .from("news")
+        .delete()
+        .eq("id", newsToDelete);
+
+      if (error) throw error;
+
+      setNewsItems((prevItems) =>
+        prevItems.filter((item) => item.id !== newsToDelete)
+      );
+      setNewsToDelete(null);
+      setConfirmationVisible(false);
     } catch (error) {
-      console.error("Error deleting post:", error.response?.data || error.message);
-      setError("Failed to delete the post.");
+      console.error("Error deleting news item:", error.message);
+      setError(error.message || "Failed to delete news item");
     } finally {
       setIsDeleting(false);
     }
   };
 
-  const filteredPosts = posts.filter((post) =>
-    post.title.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredNews = newsItems.filter((item) =>
+    item.title?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  if (isPending) return <p className="text-2xl font-medium text-gray-800">Loading...</p>;
+  if (isPending)
+    return <p className="text-2xl font-medium text-gray-800">Loading...</p>;
 
   return (
-    <div className="p-6 mt-20"> {/* Added mt-20 to prevent overlap with the navbar */}
+    <div className="p-6 mt-20">
       <Title showClose={true} className="text-xl font-bold text-gray-800">
-        Manage Posts
+        Manage News
       </Title>
 
-      {/* Navigation Buttons */}
       <div className="flex justify-between mb-6">
         <button
           onClick={() => navigate(-1)}
-          className="bg-gray-800 text-white p-2 rounded-md hover:bg-gray-700"
+          className="p-2 text-white bg-gray-800 rounded-md hover:bg-gray-700"
         >
           Back
         </button>
         <button
           onClick={() => navigate("/admin-dashboard")}
-          className="bg-green-700 text-white p-2 rounded-md hover:bg-green-600"
+          className="p-2 text-white bg-green-700 rounded-md hover:bg-green-600"
         >
           Admin Dashboard
         </button>
       </div>
 
-      {/* Search Bar */}
       <div className="mb-6">
         <input
           type="text"
-          placeholder="Search for posts..."
+          placeholder="Search news..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full p-2 border border-gray-800 rounded-md outline-none text-gray-800"
+          className="w-full p-2 text-gray-800 border border-gray-800 rounded-md outline-none"
         />
       </div>
 
-      {/* List of Posts */}
       <div className="space-y-4">
-        {filteredPosts.map((post) => (
-          <div key={post.id} className="p-4 border rounded-md bg-gray-100">
-            <h3 className="text-lg font-bold text-gray-800">{post.title}</h3>
-            <p className="text-gray-800">{post.body.substring(0, 100)}...</p>
-            <div className="mt-2 flex space-x-4">
+        {filteredNews.map((item) => (
+          <div key={item.id} className="p-4 bg-gray-100 border rounded-md">
+            <h3 className="text-lg font-bold text-gray-800">{item.title}</h3>
+            <p className="text-gray-800">{item.body?.substring(0, 100)}...</p>
+            <div className="flex mt-2 space-x-4">
               <button
-                onClick={() => navigate(`/edit-single-post/${post.id}`)} // Navigate to EditSinglePost.jsx
+                onClick={() => navigate(`/edit-single-post/${item.id}`)} // Navigate to EditSinglePost.jsx
                 className="text-green-700 underline hover:text-green-600"
               >
                 Edit
               </button>
               <button
                 onClick={() => {
-                  setPostToDelete(post.id);
-                  setConfirmationVisible(true); // Show confirmation modal
+                  setNewsToDelete(item.id);
+                  setConfirmationVisible(true);
                 }}
                 className="text-red-500 underline hover:text-red-400"
                 disabled={isDeleting}
@@ -116,21 +127,22 @@ const EditPosts = () => {
         ))}
       </div>
 
-      {/* Confirmation Dialog */}
       {confirmationVisible && (
-        <div className="fixed inset-0 flex items-center justify-center bg-gray-800 bg-opacity-50 z-50">
-          <div className="bg-white p-6 rounded-md shadow-md text-center">
-            <p className="mb-4 text-lg text-gray-800">Are you sure you want to delete this post?</p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-800 bg-opacity-50">
+          <div className="p-6 text-center bg-white rounded-md shadow-md">
+            <p className="mb-4 text-lg text-gray-800">
+              Are you sure you want to delete this news item?
+            </p>
             <div className="flex justify-center space-x-4">
               <button
                 onClick={handleDelete}
-                className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600"
+                className="px-4 py-2 text-white bg-red-500 rounded-md hover:bg-red-600"
               >
                 Yes
               </button>
               <button
                 onClick={() => setConfirmationVisible(false)}
-                className="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600"
+                className="px-4 py-2 text-white bg-gray-500 rounded-md hover:bg-gray-600"
               >
                 No
               </button>
@@ -139,7 +151,7 @@ const EditPosts = () => {
         </div>
       )}
 
-      {error && <p className="text-red-500 mt-4">{error}</p>}
+      {error && <p className="mt-4 text-red-500">{error}</p>}
     </div>
   );
 };

@@ -107,7 +107,7 @@ const NewsPage = ({ successMessage = "" }) => {
             id, 
             title, 
             body, 
-            imageUrl, 
+            main_image_url, 
             category, 
             created_at, 
             author_name,
@@ -179,7 +179,7 @@ const NewsPage = ({ successMessage = "" }) => {
   }, [session]);
 
   return (
-    <div className="container mx-auto py-6">
+    <div className="container py-6 mx-auto">
       <NewsHeader 
         category={category} 
         successMessage={successMessage} 
@@ -187,9 +187,9 @@ const NewsPage = ({ successMessage = "" }) => {
       />
 
       {errorMessage ? (
-        <p className="text-center text-red-500 mx-4">{errorMessage}</p>
+        <p className="mx-4 text-center text-red-500">{errorMessage}</p>
       ) : articles.length === 0 ? (
-        <p className="text-center text-gray-500 mx-4">
+        <p className="mx-4 text-center text-gray-500">
           No articles found for this category.
         </p>
       ) : (

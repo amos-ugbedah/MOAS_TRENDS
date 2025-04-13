@@ -2,6 +2,7 @@ import { Route, Routes, Navigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "./libs/supabaseClient";
 
+// Import components
 import SignUp from "./pages/SignUp";
 import LoginPage from "./pages/LoginPage";
 import NewsPage from "./pages/NewsPage";
@@ -10,18 +11,17 @@ import AdminPage from "./pages/AdminPage";
 import AdminLoginPage from "./pages/admin/AdminLoginPage";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import CategoryPage from "./pages/CategoryPage";
-
 import AddPosts from "./components/admin/AddPosts";
 import EditPostsAdmin from "./components/admin/EditPosts";
 import EditPostsUser from "./components/posts/EditPosts";
 import EditSinglePost from "./components/posts/EditSinglePost";
 import PostLists from "./components/admin/PostLists";
-import SearchResults from "./pages/SearchResults"; // Import SearchResults component
-
+import SearchResults from "./pages/SearchResults";
 import Navbar from "./components/layout/Navbar";
 import SubscribeForm from "./pages/SubscribeForm";
 import PostDetailPage from "./pages/PostDetailPage";
 import Home from "./pages/Home";
+import NotFound from "./pages/NotFound"; // Import dedicated 404 component
 
 function App() {
   const [user, setUser] = useState(null);
@@ -100,49 +100,47 @@ function App() {
   }, []);
 
   const PrivateRoute = ({ children }) => {
-    if (loading) return <p className="text-center text-lg mt-10">Loading...</p>;
+    if (loading) return <div className="flex justify-center mt-24"><p className="text-lg">Loading...</p></div>;
     return user ? children : <Navigate to="/login" />;
   };
 
   const AdminRoute = ({ children }) => {
-    if (loading) return <p className="text-center text-lg mt-10">Loading...</p>;
+    if (loading) return <div className="flex justify-center mt-24"><p className="text-lg">Loading...</p></div>;
     return user?.role === "admin" ? children : <Navigate to="/admin-login" />;
   };
 
   return (
     <>
       <Navbar />
-      <Routes>
-        {/* Public Routes */}
-        <Route path="/" element={<Home />} />
-        <Route path="/news" element={<NewsPage />} />
-        <Route path="/signup" element={<SignUp />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/admin-login" element={<AdminLoginPage />} />
-        <Route path="/subscribe" element={<SubscribeForm />} />
-        <Route path="/category/:categorySlug" element={<CategoryPage />} />
+      <div className="mt-24"> {/* Added mt-24 to account for navbar */}
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/" element={<Home />} />
+          <Route path="/news" element={<NewsPage />} />
+          <Route path="/signup" element={<SignUp />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/admin-login" element={<AdminLoginPage />} />
+          <Route path="/subscribe" element={<SubscribeForm />} />
+          <Route path="/category/:categorySlug" element={<CategoryPage />} />
+          <Route path="/post/:id" element={<PostDetailPage />} />
+          <Route path="/search-results" element={<SearchResults />} />
 
-        {/* Search Results Route */}
-        <Route path="/search-results" element={<SearchResults />} /> {/* Added SearchResults */}
+          {/* Protected User Routes */}
+          <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+          <Route path="/edit-post/:id" element={<PrivateRoute><EditPostsUser /></PrivateRoute>} />
+          <Route path="/edit-single-post/:id" element={<PrivateRoute><EditSinglePost /></PrivateRoute>} />
 
-        {/* Protected User Routes */}
-        <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-        <Route path="/edit-post/:id" element={<PrivateRoute><EditPostsUser /></PrivateRoute>} />
-        <Route path="/edit-single-post/:postId" element={<PrivateRoute><EditSinglePost /></PrivateRoute>} />
+          {/* Admin Routes */}
+          <Route path="/admin" element={<AdminRoute><AdminPage /></AdminRoute>} />
+          <Route path="/admin-dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+          <Route path="/create-post" element={<AdminRoute><AddPosts /></AdminRoute>} />
+          <Route path="/admin-edit-post/:id" element={<AdminRoute><EditPostsAdmin /></AdminRoute>} />
+          <Route path="/post-lists" element={<AdminRoute><PostLists /></AdminRoute>} />
 
-        {/* Admin Routes */}
-        <Route path="/admin" element={<AdminRoute><AdminPage /></AdminRoute>} />
-        <Route path="/admin-dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
-        <Route path="/create-post" element={<AdminRoute><AddPosts /></AdminRoute>} />
-        <Route path="/admin-edit-post/:id" element={<AdminRoute><EditPostsAdmin /></AdminRoute>} />
-        <Route path="/post-lists" element={<AdminRoute><PostLists /></AdminRoute>} />
-
-        {/* Post Detail Route */}
-        <Route path="/post/:id" element={<PostDetailPage />} />
-
-        {/* Catch-All Route */}
-        <Route path="*" element={<h1 className="text-center text-lg text-red-500 mt-10">404 - Page Not Found</h1>} />
-      </Routes>
+          {/* 404 Catch-all Route - Must be last */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </div>
     </>
   );
 }

@@ -9,64 +9,86 @@ const useAddPost = () => {
       title: "",
       body: "",
       category: "",
+      subheadings: [],
     },
   });
 
-  const [preview, setPreview] = useState(null); // For image preview
-  const [file, setFile] = useState(null); // For the uploaded image file
+  const [mainImage, setMainImage] = useState(null);
+  const [additionalImages, setAdditionalImages] = useState([]);
+  const [videoFile, setVideoFile] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
 
-  const handleFileChange = (selectedFile, previewUrl) => {
-    setFile(selectedFile); // Set the selected file
-    setPreview(previewUrl); // Set the preview URL
+  const handleMainImageChange = (file) => {
+    setMainImage(file);
   };
 
-  const clearPreview = () => {
-    setFile(null);
-    setPreview(null); // Clear the preview image
+  const handleAdditionalImagesChange = (files) => {
+    setAdditionalImages([...files]);
   };
 
-  const onSubmit = async (data) => {
+  const handleVideoChange = (file) => {
+    setVideoFile(file);
+  };
+
+  const onSubmit = async (formData) => {
     try {
       setIsLoading(true);
       setSuccess("");
       setError("");
 
-      // Fetch admin/user session data
+      // Get current user session
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
       if (sessionError || !sessionData.session) throw new Error("Failed to retrieve user session");
 
-      const adminName = sessionData.session.user.user_metadata?.full_name || "Unknown Admin";
+      const user = sessionData.session.user;
+      const userId = user.id;
+      const adminName = user.user_metadata?.full_name || "Unknown Admin";
 
-      let imageUrl = null;
-
-      // Upload image to Cloudinary if a file is selected
-      if (file) {
-        imageUrl = await upload(file); // Upload and get the image URL
+      // Upload main image
+      let mainImageUrl = null;
+      if (mainImage) {
+        mainImageUrl = await upload(mainImage);
       }
 
-      // Store post details in Supabase
+      // Upload additional images
+      let additionalImageUrls = [];
+      for (const file of additionalImages) {
+        const url = await upload(file);
+        if (url) additionalImageUrls.push(url);
+      }
+
+      // Upload video if provided
+      let videoUrl = null;
+      if (videoFile) {
+        videoUrl = await upload(videoFile);
+      }
+
       const payload = {
-        title: data.title,
-        body: data.body,
-        category: data.category,
-        imageUrl, // Correct column name
+        title: formData.title,
+        body: formData.body,
+        category: formData.category,
+        subheadings: formData.subheadings || [],
+        main_image_url: mainImageUrl,
+        additional_images: additionalImageUrls,
+        video_url: videoUrl,
+        created_by: userId,
+        admin_name: adminName,
         created_at: new Date().toISOString(),
-        admin_name: adminName, // Include admin name in the payload
       };
 
       const { error: insertError } = await supabase.from("news").insert([payload]);
       if (insertError) throw insertError;
 
-      reset(); // Clear the form
-      clearPreview(); // Clear the image preview
-      setSuccess("Post successfully added!");
-      setTimeout(() => setSuccess(""), 3000); // Success message disappears after 3 seconds
+      setSuccess("News post created successfully!");
+      reset(); // Reset form fields
+      setMainImage(null);
+      setAdditionalImages([]);
+      setVideoFile(null);
     } catch (err) {
-      console.error("Post Error:", err.message);
-      setError(err.message || "Failed to create post");
+      console.error("Error submitting post:", err);
+      setError(err.message || "Something went wrong");
     } finally {
       setIsLoading(false);
     }
@@ -74,14 +96,17 @@ const useAddPost = () => {
 
   return {
     control,
-    handleSubmit,
-    preview,
-    handleFileChange,
-    clearPreview,
-    onSubmit,
+    handleSubmit: handleSubmit(onSubmit),
     isLoading,
     success,
     error,
+    handleMainImageChange,
+    handleAdditionalImagesChange,
+    handleVideoChange,
+    mainImage,
+    additionalImages,
+    videoFile,
+    reset,
   };
 };
 

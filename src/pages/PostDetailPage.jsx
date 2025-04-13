@@ -1,110 +1,150 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "../libs/supabaseClient";
+import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const PostDetailPage = () => {
-  const { id } = useParams(); // Get the news post ID from the URL
-  const [post, setPost] = useState(null); // Store the news post details
-  const [comments, setComments] = useState([]); // Store related comments
-  const [loading, setLoading] = useState(true); // Loading state
-  const [error, setError] = useState(null); // Error state
+  const { id } = useParams();
   const navigate = useNavigate();
 
-  // Fetch post and comments based on ID
+  const [post, setPost] = useState(null);
+  const [subheadings, setSubheadings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [authorName, setAuthorName] = useState("Staff Writer");
+
   useEffect(() => {
     const fetchPostDetails = async () => {
       try {
         setLoading(true);
 
-        // Fetch the post details
+        // Fetch the main post + author from users table
         const { data: postData, error: postError } = await supabase
           .from("news")
-          .select("*")
+          .select(
+            `
+            *,
+            author:users!author_id (
+              fullName
+            )
+          `
+          )
           .eq("id", id)
           .single();
 
         if (postError) throw postError;
 
-        // Fetch comments related to this post using `news_id`
-        const { data: commentsData, error: commentsError } = await supabase
-          .from("comments")
+        // Fetch subheadings for this post
+        const { data: subheadingsData, error: subError } = await supabase
+          .from("subheadings")
           .select("*")
-          .eq("news_id", id);
+          .eq("post_id", id)
+          .order("created_at", { ascending: true });
 
-        if (commentsError) throw commentsError;
+        if (subError) throw subError;
 
-        setPost(postData); // Set the post data
-        setComments(commentsData); // Set the comments
+        setPost(postData);
+        setSubheadings(subheadingsData || []);
+
+        // Determine author name
+        const authorFromUserTable = postData.author?.fullName;
+        const fallbackAdminName = postData.admin_name;
+        setAuthorName(authorFromUserTable || fallbackAdminName || "Admin");
+
       } catch (err) {
-        console.error("Error fetching post or comments:", err.message);
+        console.error("Error fetching post:", err);
         setError(err.message);
+        toast.error("Failed to load post details");
       } finally {
-        setLoading(false); // Turn off loading state
+        setLoading(false);
       }
     };
 
     fetchPostDetails();
   }, [id]);
 
-  if (loading) return <p className="p-6 text-center">Loading...</p>;
-  if (error) return <p className="p-6 text-center text-red-500">Error: {error}</p>;
+  if (loading) return <div className="py-8 text-center">Loading...</div>;
+  if (error) return <div className="py-8 text-center text-red-500">{error}</div>;
+  if (!post) return <div className="py-8 text-center">Post not found</div>;
 
   return (
-    <div className="container mx-auto p-6 mt-[80px]"> {/* Added `mt-[80px]` to offset navbar */}
-      {post && (
-        <>
-          {/* Post Title */}
-          <h1 className="text-4xl font-bold">{post.title}</h1>
+    <div className="container max-w-4xl px-4 py-8 mx-auto mt-24">
+      <button
+        onClick={() => navigate(-1)}
+        className="px-4 py-2 mb-4 bg-gray-200 rounded hover:bg-gray-300"
+      >
+        Back
+      </button>
 
-          {/* Post Image */}
-          {post.imageUrl && (
-            <img
-              src={post.imageUrl}
-              alt={post.title}
-              className="my-4 w-full" // Full width, natural height
-            />
-          )}
+      <article className="p-6 bg-white rounded-lg shadow">
+        <h1 className="mb-2 text-3xl font-bold">{post.title}</h1>
 
-          {/* Post Body */}
-          <div className="whitespace-pre-line text-base leading-relaxed">
-            {post.body}
+        <p className="mb-4 text-sm text-gray-500">
+          Posted on {new Date(post.created_at).toLocaleDateString()} by{" "}
+          <span className="font-medium">{authorName}</span>
+        </p>
+
+        {post.main_image_url && (
+          <img
+            src={post.main_image_url}
+            alt={post.title}
+            className="object-contain w-full h-auto mb-6 rounded-lg max-h-96"
+            onError={(e) => {
+              e.target.src = "/placeholder.jpg";
+              e.target.classList.add("opacity-70");
+            }}
+          />
+        )}
+
+        <div className="mb-8 prose max-w-none">
+          <p className="whitespace-pre-line">{post.body}</p>
+        </div>
+
+        {/* Display subheadings */}
+        {subheadings.map((subheading, index) => (
+          <div key={index} className="mb-8">
+            <h2 className="mb-2 text-2xl font-semibold">{subheading.subheading_title}</h2>
+            <p className="text-gray-700 whitespace-pre-line">
+              {subheading.subheading_content}
+            </p>
           </div>
+        ))}
 
-          {/* Comments Section */}
-          <h2 className="text-2xl mt-8 mb-4">Comments</h2>
-          <div className="space-y-4">
-            {comments.length > 0 ? (
-              comments.map((comment) => (
-                <div key={comment.id} className="p-4 border border-gray-200 rounded-md">
-                  <p className="font-semibold">{comment.user_id}</p>
-                  <p>{comment.comment}</p>
-                  <p className="text-xs text-gray-500">
-                    {new Date(comment.commented_at).toLocaleString()}
-                  </p>
-                </div>
-              ))
-            ) : (
-              <p className="text-gray-500">No comments yet.</p>
-            )}
+        {/* Display additional images if any */}
+        {post.additional_images?.length > 0 && (
+          <div className="grid grid-cols-1 gap-4 mt-8 md:grid-cols-2">
+            {post.additional_images.map((imgUrl, index) => (
+              <img
+                key={index}
+                src={imgUrl}
+                alt={`${post.title} - ${index + 1}`}
+                className="object-contain w-full h-auto rounded-lg max-h-64"
+                onError={(e) => {
+                  e.target.src = "/placeholder.jpg";
+                  e.target.classList.add("opacity-70");
+                }}
+              />
+            ))}
           </div>
+        )}
 
-          {/* Navigation Buttons */}
-          <div className="mt-6 flex space-x-4">
-            <button
-              className="bg-gray-500 text-white px-4 py-2 rounded-md"
-              onClick={() => navigate(-1)} // Go back to the previous page
-            >
-              Back
-            </button>
-            <button
-              className="bg-blue-600 text-white px-4 py-2 rounded-md"
-              onClick={() => navigate("/")} // Navigate to the home page
-            >
-              Home
-            </button>
+        {/* Display video if available */}
+        {post.video_url && (
+          <div className="mt-8">
+            <h2 className="mb-4 text-xl font-semibold">Video</h2>
+            <div className="aspect-w-16 aspect-h-9">
+              <iframe
+                src={post.video_url}
+                title={post.title}
+                className="w-full h-96"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              ></iframe>
+            </div>
           </div>
-        </>
-      )}
+        )}
+      </article>
     </div>
   );
 };
