@@ -22,6 +22,7 @@ import SubscribeForm from "./pages/SubscribeForm";
 import PostDetailPage from "./pages/PostDetailPage";
 import Home from "./pages/Home";
 import NotFound from "./pages/NotFound"; // Import dedicated 404 component
+import Footer from "./components/layout/Footer";
 
 function App() {
   const [user, setUser] = useState(null);
@@ -141,6 +142,7 @@ function App() {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </div>
+      <Footer />
     </>
   );
 }

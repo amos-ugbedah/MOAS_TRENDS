@@ -24,7 +24,7 @@ const AdminDashboard = () => {
       console.error("Cloudinary widget not loaded yet");
       return;
     }
-    
+
     const widget = window.cloudinary.createUploadWidget(
       {
         cloudName: cloudName,
@@ -118,9 +118,9 @@ const AdminDashboard = () => {
       const admin = adminData || {};
       setAdminDetails({
         ...admin,
-        name: admin.name || userData.fullName || "Admin"
+        name: admin.name || userData.fullName || "Admin",
       });
-      
+
       setFormData({
         name: admin.name || userData.fullName || "Admin",
         hobby: admin.hobby || "",
@@ -146,24 +146,25 @@ const AdminDashboard = () => {
         .from("news")
         .select("*")
         .or(`created_by.eq.${user.id},updated_by.eq.${user.id}`)
-        .order("created_at", { ascending: false })  // Changed to created_at for more accurate sorting
+        .order("created_at", { ascending: false }) // Changed to created_at for more accurate sorting
         .limit(5);
 
       if (activityError) {
         console.warn("Could not fetch activity:", activityError.message);
         setNotifications([]);
       } else {
-        const activityNotifications = activityData.map(news => {
-          const action = news.created_by === user.id ? "created" : "updated";
-          return {
-            message: `${action} news: ${news.title}`,
-            timestamp: news.created_at || news.updated_at
-          };
-        }).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-        
-        setNotifications(activityNotifications.map(item => item.message));
-      }
+        const activityNotifications = activityData
+          .map((news) => {
+            const action = news.created_by === user.id ? "created" : "updated";
+            return {
+              message: `${action} news: ${news.title}`,
+              timestamp: news.created_at || news.updated_at,
+            };
+          })
+          .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
+        setNotifications(activityNotifications.map((item) => item.message));
+      }
     } catch (error) {
       console.error("Error in fetchAdminDetails:", error);
       navigate("/admin-login");
@@ -175,15 +176,15 @@ const AdminDashboard = () => {
   // Set up real-time subscription for news updates
   useEffect(() => {
     fetchAdminDetails();
-    
+
     const newsSubscription = supabase
-      .channel('news_changes')
+      .channel("news_changes")
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: '*',
-          schema: 'public',
-          table: 'news'
+          event: "*",
+          schema: "public",
+          table: "news",
         },
         () => fetchAdminDetails()
       )
@@ -205,16 +206,16 @@ const AdminDashboard = () => {
   const handleProfileUpdate = async (e) => {
     e.preventDefault();
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      const { error } = await supabase
-        .from("admindashboard")
-        .upsert({
-          user_id: user.id,
-          name: formData.name,
-          hobby: formData.hobby,
-          profile_picture: formData.profile_picture,
-        });
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      const { error } = await supabase.from("admindashboard").upsert({
+        user_id: user.id,
+        name: formData.name,
+        hobby: formData.hobby,
+        profile_picture: formData.profile_picture,
+      });
 
       if (error) throw error;
 
@@ -233,8 +234,8 @@ const AdminDashboard = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      <div className="flex items-center justify-center h-screen">
+        <div className="w-12 h-12 border-t-2 border-b-2 border-blue-500 rounded-full animate-spin"></div>
       </div>
     );
   }
@@ -247,25 +248,25 @@ const AdminDashboard = () => {
   };
 
   return (
-    <div className="flex bg-gray-100 min-h-screen">
+    <div className="flex min-h-screen bg-gray-100">
       {/* Sidebar */}
-      <div className="w-64 md-w-34 bg-gray-800 text-white p-4 fixed h-full mt-16">
-        <div className="mb-4 flex flex-col items-center mt-8">
+      <div className="fixed w-64 h-full p-4 text-white bg-gray-800 md-w-34">
+        <div className="flex flex-col items-center mt-8 mb-4">
           <img
             src={formData.profile_picture || "/default-profile.png"}
             alt="Profile"
-            className="w-32 h-32 rounded-full object-cover border-4 border-white"
+            className="object-cover w-32 h-32 border-4 border-white rounded-full"
           />
-          <h2 className="text-xl font-semibold mt-2">{formData.name}</h2>
+          <h2 className="mt-2 text-xl font-semibold">{formData.name}</h2>
           <p className="text-sm text-gray-300">{formData.hobby}</p>
         </div>
-        
+
         <nav className="mt-8">
           <ul className="space-y-2">
             <li>
               <button
                 onClick={() => navigate("/create-post")}
-                className="w-full text-left bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-md transition duration-200"
+                className="w-full p-2 text-left text-white transition duration-200 bg-blue-600 rounded-md hover:bg-blue-700"
               >
                 Add News
               </button>
@@ -273,7 +274,7 @@ const AdminDashboard = () => {
             <li>
               <button
                 onClick={() => navigate("/post-lists")}
-                className="w-full text-left bg-green-600 hover:bg-green-700 text-white p-2 rounded-md transition duration-200"
+                className="w-full p-2 text-left text-white transition duration-200 bg-green-600 rounded-md hover:bg-green-700"
               >
                 News List
               </button>
@@ -281,7 +282,7 @@ const AdminDashboard = () => {
             <li>
               <button
                 onClick={() => navigate("/admin-edit-post/1")}
-                className="w-full text-left bg-yellow-600 hover:bg-yellow-700 text-white p-2 rounded-md transition duration-200"
+                className="w-full p-2 text-left text-white transition duration-200 bg-yellow-600 rounded-md hover:bg-yellow-700"
               >
                 Edit News
               </button>
@@ -289,7 +290,7 @@ const AdminDashboard = () => {
             <li className="pt-4">
               <button
                 onClick={handleLogout}
-                className="w-full text-left bg-red-600 hover:bg-red-700 text-white p-2 rounded-md transition duration-200"
+                className="w-full p-2 text-left text-white transition duration-200 bg-red-600 rounded-md hover:bg-red-700"
               >
                 Logout
               </button>
@@ -299,15 +300,19 @@ const AdminDashboard = () => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 p-6 ml-64 mt-16">
-        <h1 className="text-3xl font-bold text-gray-800 mb-6">Admin Dashboard</h1>
-        
+      <div className="flex-1 p-6 mt-16 ml-64">
+        <h1 className="mb-6 text-3xl font-bold text-gray-800">
+          Admin Dashboard
+        </h1>
+
         {/* Update Profile Section */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">Update Profile</h2>
+        <div className="p-6 mb-6 bg-white rounded-lg shadow-md">
+          <h2 className="mb-4 text-xl font-semibold text-gray-800">
+            Update Profile
+          </h2>
           <form onSubmit={handleProfileUpdate}>
             <div className="mb-4">
-              <label className="block text-gray-700 mb-2">Name</label>
+              <label className="block mb-2 text-gray-700">Name</label>
               <input
                 type="text"
                 name="name"
@@ -317,9 +322,9 @@ const AdminDashboard = () => {
                 required
               />
             </div>
-            
+
             <div className="mb-4">
-              <label className="block text-gray-700 mb-2">Hobby</label>
+              <label className="block mb-2 text-gray-700">Hobby</label>
               <input
                 type="text"
                 name="hobby"
@@ -328,72 +333,79 @@ const AdminDashboard = () => {
                 className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-            
+
             <div className="mb-4">
-              <label className="block text-gray-700 mb-2">Profile Picture</label>
+              <label className="block mb-2 text-gray-700">
+                Profile Picture
+              </label>
               {formData.profile_picture && (
                 <img
                   src={formData.profile_picture}
                   alt="Current Profile"
-                  className="w-32 h-32 rounded-full object-cover mb-2"
+                  className="object-cover w-32 h-32 mb-2 rounded-full"
                 />
               )}
               <button
                 type="button"
                 onClick={showWidget}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition duration-200"
+                className="px-4 py-2 text-white transition duration-200 bg-blue-600 rounded-lg hover:bg-blue-700"
               >
                 Upload New Image
               </button>
             </div>
-            
+
             <button
               type="submit"
-              className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg transition duration-200"
+              className="px-6 py-2 text-white transition duration-200 bg-green-600 rounded-lg hover:bg-green-700"
             >
               Save Changes
             </button>
           </form>
         </div>
-        
+
         {/* Stats and Recent Activity */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           {/* Recent News Section */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">Recent News</h2>
+          <div className="p-6 bg-white rounded-lg shadow-md">
+            <h2 className="mb-4 text-xl font-semibold text-gray-800">
+              Recent News
+            </h2>
             {recentNews.length === 0 ? (
               <p className="text-gray-500">No recent news available.</p>
             ) : (
               <ul className="space-y-3">
                 {recentNews.map((news) => (
-                  <li key={news.id} className="border-b pb-2">
+                  <li key={news.id} className="pb-2 border-b">
                     <Link
                       to={`/post/${news.id}`}
-                      className="text-blue-600 hover:text-blue-800 hover:underline font-medium"
+                      className="font-medium text-blue-600 hover:text-blue-800 hover:underline"
                     >
                       {news.title}
                     </Link>
-                    <p className="text-gray-600 text-sm mt-1">
+                    <p className="mt-1 text-sm text-gray-600">
                       {news.body?.slice(0, 100)}...
                     </p>
-                    <p className="text-gray-500 text-xs mt-1">
-                      Posted by: {news.admin_name || formData.name || "Admin"} • {formatDate(news.created_at)}
+                    <p className="mt-1 text-xs text-gray-500">
+                      Posted by: {news.admin_name || formData.name || "Admin"} •{" "}
+                      {formatDate(news.created_at)}
                     </p>
                   </li>
                 ))}
               </ul>
             )}
           </div>
-          
+
           {/* Recent Notifications Section */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">Recent Activity</h2>
+          <div className="p-6 bg-white rounded-lg shadow-md">
+            <h2 className="mb-4 text-xl font-semibold text-gray-800">
+              Recent Activity
+            </h2>
             {notifications.length === 0 ? (
               <p className="text-gray-500">No recent activities.</p>
             ) : (
               <ul className="space-y-3">
                 {notifications.map((notification, index) => (
-                  <li key={index} className="border-b pb-2">
+                  <li key={index} className="pb-2 border-b">
                     <p className="text-gray-700">{notification}</p>
                   </li>
                 ))}
